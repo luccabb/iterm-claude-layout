@@ -63,7 +63,10 @@ Waiting for the layout to settle means an iTerm quit, which tears windows down, 
 `iterm-claude-layout restore`:
 
 1. Picks the newest snapshot from before the running iTerm started that still has a Claude session to bring back. Empty snapshots from launches in between are skipped.
-2. Leaves out sessions that are still running, including those in tabs closed within iTerm's undo window.
+2. Leaves out what is still open:
+   - A window whose Claude sessions have all ended is rebuilt whole.
+   - From a window with a session still running, only the tabs whose sessions have all ended come back, in a new window.
+   - Sessions in tabs closed within iTerm's undo window still count as running.
 3. Recreates the windows, tabs and splits at the same sizes, and sets the tab titles.
 4. Runs `cd <dir> && claude --resume <id>` in each pane. Each session gets:
    - the permission mode and effort it last had, read from the end of its transcript (bypass sessions get `--dangerously-skip-permissions`)

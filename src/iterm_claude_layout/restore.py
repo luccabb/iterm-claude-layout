@@ -24,17 +24,29 @@ def pick(snapshots: list[tuple[Path, dict]], current: dict, live: set[str], late
     return candidates[-1] if candidates else None
 
 
+def _session_ids(node: dict) -> list[str]:
+    return [leaf["claude"]["session_id"] for leaf in snapshot.leaves(node) if "claude" in leaf]
+
+
+def _ended(tab: dict, live: set[str]) -> bool:
+    ids = _session_ids(tab["layout"])
+    return bool(ids) and not any(sid in live for sid in ids)
+
+
 def plan(snap: dict, live: set[str]) -> list[dict]:
-    """Windows and tabs to open, with the command each pane should run; tabs already fully running are dropped."""
+    """Windows and tabs to open, with the command each pane should run.
+
+    A window whose Claude sessions have all ended is rebuilt whole. A window with a session still
+    running is still open, so only its tabs whose sessions have all ended come back, in a new window.
+    """
     default_mode, default_effort = claude.defaults()
     windows = []
     for window in snap["windows"]:
-        tabs = []
-        for tab in copy.deepcopy(window["tabs"]):
-            panes = list(snapshot.leaves(tab["layout"]))
-            if all(p.get("claude", {}).get("session_id") in live for p in panes):
-                continue
-            for pane in panes:
+        tabs = copy.deepcopy(window["tabs"])
+        if any(sid in live for tab in tabs for sid in _session_ids(tab["layout"])):
+            tabs = [tab for tab in tabs if _ended(tab, live)]
+        for tab in tabs:
+            for pane in snapshot.leaves(tab["layout"]):
                 session = pane.get("claude")
                 if session and session["session_id"] not in live and claude.transcript(session["session_id"]):
                     pane["command"] = claude.resume_command(session, default_mode, default_effort)
@@ -42,7 +54,6 @@ def plan(snap: dict, live: set[str]) -> list[dict]:
                     pane.pop("claude", None)
                     if pane.get("cwd"):
                         pane["command"] = f"cd {shlex.quote(pane['cwd'])}"
-            tabs.append(tab)
         if tabs:
             windows.append({**window, "tabs": tabs})
     return windows

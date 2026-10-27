@@ -53,7 +53,7 @@ def cmd_restore(args) -> int:
         taken = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(snap["taken_at"]))
         print(f"snapshot {path.name} taken {taken}: {_summary(snap)}")
         if not windows:
-            print("everything in it is already running")
+            print("nothing to restore: everything in it is still open")
             return
         print(restore.describe(windows))
         if args.dry_run:
