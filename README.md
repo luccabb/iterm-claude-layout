@@ -8,14 +8,29 @@ iterm-claude-layout restore --dry-run  # show what would be opened
 iterm-claude-layout list               # saved snapshots
 ```
 
-## Install
+## Turn it on
 
-```
-uv tool install --editable .
-iterm-claude-layout install
-```
+1. Install the command:
+   ```
+   uv tool install --editable .
+   ```
+2. Register the snapshot loop with iTerm:
+   ```
+   iterm-claude-layout install
+   ```
+   This puts it in iTerm's AutoLaunch folder, so iTerm starts it at every launch and stops it when iTerm quits. If iTerm's Python runtime is missing, iTerm offers to download it. Accept.
+3. Start it now, without restarting iTerm:
+   ```
+   nohup iterm-claude-layout daemon >/dev/null 2>&1 &
+   ```
+   This copy runs until iTerm quits. From the next launch on, iTerm runs it.
+4. Check that it is recording:
+   ```
+   tail -3 ~/Library/Application\ Support/iterm-claude-layout/daemon.log
+   iterm-claude-layout list
+   ```
 
-`install` registers the snapshot loop as an iTerm AutoLaunch script, so iTerm starts it at every launch. AutoLaunch scripts need iTerm's Python runtime; `install` asks iTerm to download it if it is missing. To start the loop without restarting iTerm, run `iterm-claude-layout daemon &`. It stops when iTerm quits, and AutoLaunch takes over at the next launch.
+To turn it off, delete `~/Library/Application Support/iTerm2/Scripts/AutoLaunch/iterm_claude_layout.py` and run `pkill -f 'iterm[-_]claude[-_]layout'`.
 
 ## How it works
 
@@ -68,4 +83,10 @@ Panes that were not running Claude reopen as shells in their last directory.
 uv pip install -e '.[test]' && pytest
 ```
 
-`test_roundtrip.py` drives the running iTerm. It opens a scratch window, snapshots it, closes it, restores it and compares the result. It is skipped outside iTerm.
+The test drives the running iTerm:
+
+1. It opens a scratch window with nested splits and a titled tab.
+2. It snapshots the window, closes it, and restores it from the snapshot.
+3. It checks that the structure, pane sizes, folders and title match.
+
+It is skipped outside iTerm.
