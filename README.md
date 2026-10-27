@@ -2,17 +2,18 @@
 
 Keeps a running record of your iTerm2 windows, tabs and splits, and of the Claude Code session in each pane, so the whole layout can be rebuilt after a crash, a dead battery or an iTerm restart.
 
-```
-iterm-claude-layout restore            # rebuild the layout from before iTerm last started
-iterm-claude-layout restore --dry-run  # show what would be opened
-iterm-claude-layout list               # saved snapshots
-```
+## Requirements
+
+- macOS and iTerm2 with the Python API turned on: iTerm2 → Settings → General → Magic → Enable Python API. Tested on iTerm2 3.6.9.
+- Claude Code. Tested with 2.1.311. The tool relies on Claude's live session registry in `~/.claude/sessions`.
+- [uv](https://docs.astral.sh/uv/)
 
 ## Turn it on
 
-1. Install the command:
+1. Install the command from a clone, editable, so the iTerm script runs the clone and `git pull` updates it:
    ```
-   uv tool install --editable .
+   git clone git@github.com:luccabb/iterm-claude-layout.git ~/code/iterm-claude-layout
+   uv tool install --editable ~/code/iterm-claude-layout
    ```
 2. Register the snapshot loop with iTerm:
    ```
@@ -30,7 +31,35 @@ iterm-claude-layout list               # saved snapshots
    iterm-claude-layout list
    ```
 
+To update, run `git pull` in the clone, then restart iTerm, or stop the loop with `pkill -f 'iterm[-_]claude[-_]layout'` and repeat step 3.
+
 To turn it off, delete `~/Library/Application Support/iTerm2/Scripts/AutoLaunch/iterm_claude_layout.py` and run `pkill -f 'iterm[-_]claude[-_]layout'`.
+
+## After a crash
+
+Open iTerm, then:
+
+```
+iterm-claude-layout restore --dry-run   # what it would open
+iterm-claude-layout restore
+```
+
+`restore` uses the newest snapshot from before iTerm last started.
+
+Sometimes you want something back that you closed while iTerm kept running, such as a window or tab you closed after `/exit`ing its Claude sessions. Use the newest snapshot regardless of launch:
+
+```
+iterm-claude-layout restore --latest
+```
+
+Or pick a snapshot by hand:
+
+```
+iterm-claude-layout list
+iterm-claude-layout restore --snapshot ~/Library/Application\ Support/iterm-claude-layout/snapshots/<file>
+```
+
+Each restore uses one snapshot. Things closed at different times may need separate `--snapshot` restores.
 
 ## How it works
 
@@ -44,7 +73,7 @@ Claude sessions ──┘    (history kept)         + claude --resume in each pa
 
 ### Recording
 
-The snapshot loop runs inside iTerm and talks to it through iTerm's Python API.
+The snapshot loop talks to iTerm through iTerm's Python API.
 
 1. After a layout change has held still for 3 seconds, and every 15 seconds otherwise, it reads:
    - each window's frame
@@ -75,15 +104,25 @@ Waiting for the layout to settle means an iTerm quit, which tears windows down, 
 
 Panes that were not running Claude reopen as shells in their last directory.
 
+## Troubleshooting
+
+- **`There was a problem connecting to iTerm2`:** the Python API is off; see Requirements.
+- **`no snapshot from before this iTerm launch`:** iTerm has not restarted since the loop started recording. For something closed during this launch, use `--latest` or `--snapshot`.
+- **`nothing to restore: everything in it is still open`:** those Claude sessions are still running. iTerm keeps a closed tab's processes alive so the close can be undone. `/exit` the sessions before closing, or bring the tab back with ⌘Z (Undo Close).
+- **A Claude pane comes back as a plain shell:** its session was still running somewhere, or its transcript is gone. Claude deletes transcripts older than `cleanupPeriodDays`.
+- **A session is reported `not confirmed`:** it did not reach Claude's prompt within two minutes. Look at that pane.
+
 ## Limits
 
+- iTerm2 only. tmux and other terminals are not supported.
+- Plain-shell panes reopen in their last directory, but whatever ran in them is not restarted and their scrollback is not restored.
 - A model switched with `/model` inside a session is not carried over.
 - The layout is only as fresh as the last snapshot: about 15 seconds behind at most, or 3 seconds after a layout change.
 
 ## Tests
 
 ```
-uv pip install -e '.[test]' && pytest
+uv run --extra test pytest
 ```
 
 The test drives the running iTerm:
