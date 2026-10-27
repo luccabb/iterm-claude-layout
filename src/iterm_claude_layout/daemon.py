@@ -41,6 +41,8 @@ async def main(connection: iterm2.Connection) -> None:
             if fp != last:
                 log.info("saved %s", fp)
             last = fp
+        except iterm2.window.GetPropertyException:
+            changed.set()
         except Exception:
             log.exception("snapshot failed")
         try:

@@ -54,18 +54,24 @@ async def build(connection: iterm2.Connection, windows: list[dict]) -> tuple[lis
     for spec in windows:
         window, tab = await _ready(app, (await iterm2.Window.async_create(connection)).window_id)
         created.append(window)
-        x, y, width, height = spec["frame"]
-        await window.async_set_frame(iterm2.Frame(iterm2.Point(x, y), iterm2.Size(width, height)))
-        active = None
+        tabs = []
         for i, tab_spec in enumerate(spec["tabs"]):
             if i:
                 _, tab = await _ready(app, window.window_id, (await window.async_create_tab()).tab_id)
-            panes = await _split(tab.current_session, tab_spec["layout"])
+            tabs.append((tab, tab_spec, await _split(tab.current_session, tab_spec["layout"])))
+        # iTerm moves and resizes a window as tabs and splits are added, so the frame goes on last.
+        x, y, width, height = spec["frame"]
+        await window.async_set_frame(iterm2.Frame(iterm2.Point(x, y), iterm2.Size(width, height)))
+        active = None
+        for tab, tab_spec, panes in tabs:
             for session, leaf in panes:
                 session.preferred_size = iterm2.Size(leaf["cols"], leaf["rows"])
             await tab.async_update_layout()
             if tab_spec.get("title"):
                 await tab.async_set_title(tab_spec["title"])
+            if tab_spec.get("active"):
+                active = tab
+        for tab, tab_spec, panes in tabs:
             for session, leaf in panes:
                 if leaf.get("command"):
                     await session.async_send_text(leaf["command"] + "\n")
@@ -73,8 +79,6 @@ async def build(connection: iterm2.Connection, windows: list[dict]) -> tuple[lis
                     results.append((leaf, await _settle(session)))
                 if leaf.get("active"):
                     await session.async_activate(select_tab=False)
-            if tab_spec.get("active"):
-                active = tab
         if spec.get("fullscreen"):
             await window.async_set_fullscreen(True)
         if active is not None:

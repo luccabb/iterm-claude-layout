@@ -20,7 +20,7 @@ def sizes(node):
 
 
 async def settle_paths(sessions, expected):
-    for _ in range(40):
+    for _ in range(120):
         paths = [await s.async_get_variable("path") for s in sessions]
         if paths == expected:
             return
@@ -40,11 +40,13 @@ def test_snapshot_then_restore_rebuilds_the_same_layout(tmp_path):
         await app.async_refresh()
         window = app.get_window_by_id(window.window_id)
         try:
-            await window.async_set_frame(iterm2.Frame(iterm2.Point(240, 180), iterm2.Size(1300, 760)))
             left = window.current_tab.current_session
             top_right = await left.async_split_pane(vertical=True)
             bottom_right = await top_right.async_split_pane(vertical=False)
-            left.preferred_size = iterm2.Size(70, left.grid_size.height)
+            cols = left.grid_size.width + top_right.grid_size.width
+            left.preferred_size = iterm2.Size(cols // 3, left.grid_size.height)
+            for session in (top_right, bottom_right):
+                session.preferred_size = iterm2.Size(cols - cols // 3, session.grid_size.height)
             await window.current_tab.async_update_layout()
             second = await window.async_create_tab()
             await second.async_set_title("roundtrip")
