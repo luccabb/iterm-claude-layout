@@ -12,7 +12,7 @@ from . import claude, daemon, restore, snapshot, store
 AUTOLAUNCH = Path.home() / "Library" / "Application Support" / "iTerm2" / "Scripts" / "AutoLaunch" / "iterm_claude_layout.py"
 WRAPPER = """import sys
 
-sys.path.insert(0, {src!r})
+sys.path.append({src!r})
 
 import iterm2
 from iterm_claude_layout.daemon import main
