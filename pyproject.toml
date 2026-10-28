@@ -3,6 +3,8 @@ name = "iterm-claude-layout"
 version = "0.1.0"
 description = "Snapshot iTerm2 windows, tabs and splits with the Claude Code session in each pane, and rebuild them after a crash"
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.9"
 dependencies = ["iterm2>=2.7"]
 

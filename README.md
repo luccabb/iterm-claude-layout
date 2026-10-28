@@ -132,3 +132,7 @@ The test drives the running iTerm:
 3. It checks that the structure, pane sizes, folders and title match.
 
 It is skipped outside iTerm.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
